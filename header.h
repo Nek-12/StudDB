@@ -1,54 +1,9 @@
-#pragma once //Don't repeat the inclusion to avoid conflicts
-
-#include <map> //Main storage
-//#include <utility> //For advance and other stuff
-#include <vector> //For search
-#include <iostream> //IO
-#include <set> //For storing pointers
-#include "lib/fort.hpp" //For printing tables
-
-//#define NDEBUG //Forbid debugging output in the release version (explicit, but can be defined by CMake automatically)
-#ifndef __linux__
-#include <conio.h>
-#define CARRIAGE_RETURN_CHAR 13 //getch() returns different keycodes for windows and linux
-#define BACKSPACE_CHAR 8
-#define CLS "cls"
-using ull = unsigned long long; //The size of unsigned long on my linux distro is around ~10^25, however on my Windows OS the size of
-//unsigned long long (!) is just ~10^20
-#else
-using ull = unsigned long; //Depends on the platform
-#define CARRIAGE_RETURN_CHAR 10
-#define BACKSPACE_CHAR 127
-#define CLS "clear"
-#include <termios.h>
-int getch();
-#endif
-#define MAX_ID 1000000000000000000u //19 digits
-#define MAX_ID_LENGTH 19 //I have settled on this maximum length of the id, but it can be increased and even made a string.
-extern std::string path; //Path to the program folder, see main.cpp -> int main()
-
-class Data;
+#pragma once
+#include "misc.h"
 class Entry;
-class Book;
-class Author;
-class Genre;
-extern Data* data;
-void setTableProperties(fort::char_table&, unsigned, unsigned); //Edit the table
-void pause(); //Wait for a keypress
-ull stoid(const std::string& s); //change string to an ID
-std::string getPassword();
-ull genID();
-void cls();
-unsigned getCurYear();
-bool checkString(const std::string&, char); //Input check
-bool checkDate(const std::string& s);
-std::string lowercase(const std::string&);
-std::string hash(const std::string& s); //uses sha256.cpp and sha256.h for encrypting passwords, outputs hashed string
-bool readString(std::istream& is, std::string& s, char mode);
-//allows for reading a line from the iostream object with input check (foolproofing)
-// 's' for strings with spaces, 'n' for normal, 'd' for date, 'p' for passwords, 'i' for numbers (IDs), 'y' for years
-//Not the best solution but convenient for me
-class Entry {
+class Student;
+class Event;
+//TODO: Edit comments
 //Base class
 /*
  * Each journal entry represents some kind of table row that contains different info for each entry, but the operations are same.
@@ -56,111 +11,82 @@ class Entry {
  * A lot of virtual functions to minimize dynamic casts and RTTI which are slow
  * But the nature is such that sometimes we can't avoid casts in my project. At least I couldn't.
 */
-    friend std::ostream& operator<<(std::ostream& os, const Entry& e) {//dynamic binding here
+class Entry {
+    friend class Data;
+    friend std::ostream& operator<<(std::ostream& os, const Entry& e) { //dynamic binding here
         os << e.to_string(); //each type prints its own info, virtual
         return os;
     }
     friend bool operator==(const Entry& lhs, const Entry& rhs) //For some containers and functions
-    { return lhs.id() == rhs.id(); } //applicable to any entry because of dynamic binding
+    { plog->put("called", lhs.getName(), "==", rhs.getName()); return lhs.id() == rhs.id(); } //applicable to any entry because of dynamic binding
 public:
     Entry() = delete; //No blank entries
     Entry(const Entry& e) = delete; //No copies
 //    Copying an entry doesn't make sense. Why would we need several identical lines in our journal?
 //    Entry& operator=(const Entry&) = delete; //No assigning
-    virtual ~Entry() = default;
-    [[nodiscard]] const ull& id() const //We shouldn't discard the returned value for the getter. Would make no sense. Just for safety
-    { return no; }
+    virtual ~Entry();
+    [[nodiscard]] const ull& id() const { return unique_id; }//We shouldn't discard the returned value for the getter. Would make no sense. Just for safety
     [[nodiscard]] std::string getName() const { return name; }
     void rename(const std::string& s) { name = s; }
-    virtual bool link(Entry* e) = 0; //Pure virtuals for an abstract base class
-    virtual bool unlink(Entry* e) = 0;
+    bool link(Entry* e);
+    bool unlink(Entry* e);
+    size_t enumLinks() {return links.size();}
 protected: //Constructors are protected to disallow users creating entries in the journal. It's unsafe and makes no sense. Users will use the
     [[nodiscard]] virtual std::string to_string() const = 0;
     [[nodiscard]] virtual bool check(const std::string& s) const = 0;
-    //Data class instead, and the safety is going to be much better
-    Entry(Entry&& e) noexcept: no(e.no), name(std::move(e.name)) {} //We can only move entries from one journal to another
-    explicit Entry(std::string n, const ull& id) : no(id), name(std::move(n)) {
-#ifndef NDEBUG
-        std::cout << getName() << " was created \n";
-#endif
+    explicit Entry(const ull& id, std::string n) : unique_id(id), name(std::move(n)) {
+       plog->put(getName(), "was created");
     }
+    std::set<Entry*> links;
 private:
-    ull no; //unique id
+    ull unique_id; //unique id
     std::string name;
 };
 
-class Book : public Entry {
-    friend class Genre;
-    friend class Author;
+class Student : public Entry {
     friend class Data;
 public:
-    ~Book() override;
-    Book(Book&& b) noexcept; //Exists
-    explicit Book(const std::string& t, const unsigned& y = 0, const ull& n = genID()) : Entry(t, n), year(y) {}
+    ~Student() override = default;
+    Student(Student&& b) = delete;
+    [[nodiscard]] unsigned short getAge() const {
+        return getCurYear() - stoi(birthdate.substr(birthdate.find_last_of('.')+1,4));
+    }
+    bool switchTuition() { return isTuition = !isTuition; }
+    void setAvgGrade(float& avg) { avgGrade = avg;}
+    void setDegree(const std::string& d) {degree = d;}
+    void setBirthDate(const std::string& d) {birthdate = d;}
+private:
+    //CONSTRUCTOR
+    explicit Student(const ull& no, const std::string& n, std::string  d,  std::string  b, bool i, float gr)
+            : Entry(no, n), degree(std::move(d)), birthdate(std::move(b)), isTuition(i),avgGrade(gr) {}
     [[nodiscard]] bool check(const std::string& s) const override;
     [[nodiscard]] std::string to_string() const override;
-    bool link(Entry* pe) override;
-    bool unlink(Entry* pe) override;
-    void remGenre(const size_t& pos); //Custom functions needed for selecting one among the many
-    void remAuthor(const size_t& pos);
-    [[nodiscard]] size_t enumAuthors() const //Get the number of authors
-    { return authors.size(); }
-    [[nodiscard]] size_t enumGenres() const { return genres.size(); }
-    [[nodiscard]] unsigned getYear() const { return year; }
-    void setYear(unsigned int y) { year = y; }
-private:
-    unsigned year = 0;
-    std::set<Entry*> authors; //Holds pointers to objects of authors. Thought this is a set of entries, we KNOW there are authors only
-    std::set<Entry*> genres; //To avoid downcasting as much as possible
+    std::string degree;
+    std::string birthdate;
+    bool isTuition;
+    float avgGrade;
 };
-
-class Author : public Entry {//Same logic as above
-    friend class Book;
+class Event : public Entry {
     friend class Data;
 public:
-    ~Author() override;
-    Author(Author&& a) noexcept;
-    explicit Author(const std::string& n, std::string d, std::string c, const ull& id = genID()) :
-            Entry(n, id), country(std::move(c)), date(std::move(d)) {}
-    bool link(Entry* pe) override;
-    bool unlink(Entry* pe) override;
-    void remBook(const size_t& pos); //Custom
-    void setCountry(const std::string& c) { country = c; }
-    void setDate(const std::string& c) { date = c; }
-    [[nodiscard]] size_t enumBooks() const { return books.size(); }
+    ~Event() override = default;
+    Event(Event&& b) = delete;
+    void setPlace(const std::string& s) {place = s;}
+    void setDate(const std::string& s) {date = s;}
+private:
+    //CONSTRUCTOR
+    explicit Event(const ull& no, const std::string& n, std::string d, std::string pl) : Entry(no,n), place(std::move(pl)), date(std::move(d)) {}
     [[nodiscard]] std::string to_string() const override;
     [[nodiscard]] bool check(const std::string& s) const override;
-private:
-    std::string country; //Where the author was born
-    std::string date; //When the author was born
-    std::set<Entry*> books;
+    std::string place;
+    std::string date;
 };
 
-class Genre : public Entry {
-    friend class Book;
-    friend class Data;
+class Data {  // SINGLETON for storing all the nested structures
 public:
-    explicit Genre(std::string n, ull id = genID()) : Entry(std::move(n), id) {}
-    ~Genre() override;
-    Genre(Genre&& g) noexcept;
-    bool link(Entry* pe) override;
-    bool unlink(Entry* pe) override;
-    [[nodiscard]] std::string to_string() const override;
-    [[nodiscard]] bool check(const std::string& s) const override;
-//    [[nodiscard]] size_t enumBooks() const
-//    { return books.size(); }
-private:
-    std::set<Entry*> books;
-};
-
-class Data {// SINGLETON for storing all the nested structures
-    friend class Book;
-    friend class Genre;
-    friend class Author;
-public:
-    Data(Data const&) = delete; //No copying, no moving!
-    void operator=(Data const&) = delete; //No assigning!
-    //Default destructor
+    Data(const Data &) = delete; //No copying, no moving!
+    void operator=(const Data&) = delete; //No assigning!
+    ~Data() = default;
     static Data* getInstance() //Returns a reference to the single static instance of Data.
     {
         static Data instance; //The instance is always one and lazy-evaluated on the first use
@@ -168,34 +94,21 @@ public:
     }
     void load(); //Loads all the data from several files
     void save(); //Writes the data to the files (books.txt etc.)
-    void printBooks(); //Print all the books
-    void printAuthors(); //Authors
-    void printGenres(unsigned = getCurYear()); //Special
-    void printCredentials(bool isadmin);
+    std::string printCredentials(bool isadmin);
     std::vector<Entry*> search(const std::string& s); //Search anything
     template<typename ...Args>
-    //Variadic template to generate an Entry in-place without any copies
-    Book* addBook(const Args& ...args) //Just forwards all the args to the constructor
-    {
-        auto it = mbooks.try_emplace(args...); //Forward again
-        return (it.second ? &it.first->second : nullptr); //On success return the pointer
-    }
+    Student* addStudent(const ull& group, const ull& id, const Args& ...args);
     template<typename ...Args>
-    //3 templates because 3 containers
-    Author* addAuthor(const Args& ...args) {
-        auto it = mauthors.try_emplace(args...);
-        return (it.second ? &it.first->second : nullptr);
+    Event* addEvent(const ull&, const Args& ...args);
+    auto addGroup(const ull& no) {
+        return groups.try_emplace(no); //TODO: Is ok?
     }
-    template<typename ...Args>
-    Genre* addGenre(const Args& ...args) {
-        auto it = mgenres.try_emplace(args...);
-        return (it.second ? &it.first->second : nullptr);
-    }
-    bool erase(Book& e) //For every different type
-    { return mbooks.erase(e.id()); }
-    bool erase(Author& e) { return mbooks.erase(e.id()); }
-    bool erase(Genre& e) { return mbooks.erase(e.id()); }
-    //All functions operate in logariphmic time
+    void erase(Student* s);
+    bool erase(const ull& g);
+    void erase(Event* e);
+    std::string printEvents();
+    std::string printGroups();
+    std::string printStudents(const ull& gid);
     bool delAccount(const std::string& l, const bool& isadmin);
     bool passCheck(const std::string& l, const std::string& p, const bool& isadmin) {
         return ((isadmin ? admins.find(l) : users.find(l))->second == hash(p));
@@ -216,14 +129,12 @@ public:
     }
 private:
     Data() = default; //private to disallow creation
-    static void ensureFileExists(const std::string& f); //Users don't need that function
-    std::map<ull, Genre> mgenres;
-    std::map<ull, Author> mauthors;
-    std::map<ull, Book> mbooks; //Contains all the Books in the database
+    std::map<ull,std::vector<std::unique_ptr<Student>>> groups;
+    std::vector<std::unique_ptr<Event>> events;
     std::map<std::string, std::string> users; // holds <login, password> (hashed)
     std::map<std::string, std::string> admins; //same
 };
-//CONSTANTS
+
 #define LOGINPROMPT  "Enter the login or \"exit\" to exit: "
 #define PASSPROMPT  "Enter the password or \"exit\" to exit: "
 #define PASSCONFIRM  "Confirm the password or enter \"exit\" to exit: "
@@ -256,9 +167,9 @@ private:
                                    "\n2 -> Show data "\
                                    "\nq -> Go back"
 #define SHOW_DATA_MENU_ENTRIES    "Select an option: "\
-                                  "\n1 -> Show all books "\
-                                  "\n2 -> Show all authors "\
-                                  "\n3 -> Show all genres for a given year "\
+                                  "\n1 -> Show all groups and students "\
+                                  "\n2 -> Show all events "\
+                                  "\n3 -> Show all students of a group "\
                                   "\nq -> Go back"
 #define WELCOME_MENU "Welcome. "\
                      "\n1 -> User sign in "\
@@ -284,3 +195,4 @@ private:
                             "\n5 -> Remove books"\
                             "\n6 -> Delete this author"\
                             "\nq -> Nothing"
+

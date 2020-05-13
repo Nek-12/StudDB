@@ -3,6 +3,7 @@
 
 std::string path; //extern global string
 Data* data = nullptr;
+Log* plog = nullptr;
 #ifdef __linux__
 int getch() //Getch for linux
 {
@@ -19,20 +20,12 @@ int getch() //Getch for linux
 #endif
 inline void cls() //This function depends on platform
 { system(CLS); }
-//TODO: Fix: When adding/editing books, there is no check that GENRE or AUTHOR with that ID is present and vice versa
 bool yesNo(const std::string& msg);
 ull inputID();
 ull select(const ull& limit);
 std::vector<Entry*> search();
 Entry* selectEntry();
 void addEntries(Entry* pe);
-Author* newAuthor();
-Book* newBook();
-Genre* newGenre();
-void editBookEntries(Book* pb);
-void manageBook(Book* pb);
-void manageAuthor(Author* pa);
-void manageGenre(Genre* pg);
 void manageEntry();
 void showData();
 void management(bool isadmin);
@@ -128,7 +121,7 @@ void addEntries(Entry* pe) {
             std::cout << "Please select a valid entry to link with " << pe->getName() << " !" << std::endl;
     }
 }
-
+/*
 Author* newAuthor() {//Add a new author and, if needed, provide a recursion to add something else.
     cls();
     std::string n, d, c;
@@ -361,37 +354,35 @@ void manageGenre(Genre* pg) {//Specialized actions for every entry
 void manageEntry() {//Uses RTTI to know which entry we are editing.
     Entry* pe = selectEntry(); //Find an entry to edit and select it
     if (!pe) return;
-    if (typeid(*pe) == typeid(Genre))
-        manageGenre(static_cast<Genre*>(pe));
-    else if (typeid(*pe) == typeid(Author))
-        manageAuthor(static_cast<Author*>(pe)); //Static cast is SAFE since we got the typeid match
-    else if (typeid(*pe) == typeid(Book))
-        manageBook(static_cast<Book*>(pe));
+    if (typeid(*pe) == typeid(Student))
+        manageStudent(static_cast<Student*>(pe));
+    else if (typeid(*pe) == typeid(Event))
+        manageEvent(static_cast<Event*>(pe)); //Static cast is SAFE since we got the typeid match
 }
-
+*/
 void showData() {
     std::string temp;
-    unsigned y;
+    ull gid;
     cls();
     std::cout << SHOW_DATA_MENU_ENTRIES << std::endl;
     while (true) {
         switch (getch()) {
             case '1':
                 cls();
-                data->printBooks(); //Print tables
+                std::cout << data->printGroups(); //Print tables
                 pause();
                 return;
             case '2':
                 cls();
-                data->printAuthors();
+                std::cout << data->printEvents();
                 pause();
                 return;
             case '3':
                 cls();
-                std::cout << "Enter the time period in years: " << std::endl; //Custom behavior according to the supervisor's request
-                while (!readString(std::cin, temp, 'y'));
-                y = stoid(temp);
-                data->printGenres(y);
+                std::cout << "Enter the group #: " << std::endl;
+                while (!readString(std::cin, temp, 'i'));
+                gid = stoid(temp);
+                std::cout << data->printStudents(gid);
                 pause();
                 return;
             case 'q':
@@ -416,16 +407,16 @@ void management(bool isadmin) {//Differentiates between right levels
                 showData(); //Show tables
                 break;
             case '3':
-                if (isadmin) manageEntry(); //For admins: create and manage entries
+                //if (isadmin) manageEntry(); //For admins: create and manage entries
                 break;
             case '4':
-                if (isadmin) newBook();
+                //if (isadmin) newBook();
                 break;
             case '5':
-                if (isadmin) newAuthor();
+                //if (isadmin) newAuthor();
                 break;
             case '6':
-                if (isadmin) newGenre();
+                //if (isadmin) newGenre();
                 break;
             default:
                 break;
@@ -466,7 +457,7 @@ void manageUsr() //Admins can delete users, but not admins (except own)
     std::string l, p;
     while (true) {
         cls();
-        data->printCredentials(false); //To see which users to delete
+        std::cout << data->printCredentials(false); //To see which users to delete
         std::cout << LOGINPROMPT << std::endl;
         while (!readString(std::cin, l, 'n'));
         if (l == "exit") return;
@@ -489,9 +480,6 @@ void manageUsr() //Admins can delete users, but not admins (except own)
 void createAccPrompt(bool isadmin) {
     std::string l, p, temp;
     cls();
-#ifndef NDEBUG
-    data->printCredentials(isadmin);
-#endif
     std::cout << LOGINPROMPT << std::endl;
     while (!readString(std::cin, l, 'n'));
     if (l == "exit") return;
@@ -504,9 +492,6 @@ void createAccPrompt(bool isadmin) {
     if (!passConfirm(p)) return;
     data->addAccount(l, p, isadmin);
     std::cout << "Successfully created account " << l << " ! Forwarding..." << std::endl;
-#ifndef NDEBUG
-    data->printCredentials(isadmin);
-#endif
     pause();
     if (!isadmin) console(l, false); //If the acc was created for user we can log him in instantly
 }
@@ -603,23 +588,17 @@ void login(bool isadmin) {
     pause();
     console(usr, isadmin);
 }
-
 int main(int, char* argv[]) try {
-//Try function block for convenience. Argc is unused, argv is an array of char arrays, each with an argument, first is path
-    data = Data::getInstance(); //Assign to our global pointer. For exception safety
     path = argv[0];
     path.erase(path.find_last_of('\\') + 1); //Makes 'path' be the path to the app folder, removing program name
-    data->load(); //Loads ALL the data
+//Try function block for convenience. Argc is unused, argv is an array of char arrays, each with an argument, first is path
+    plog = Log::init(path + "log.txt");
+    plog->print();
+    data = Data::getInstance(); //Assign to our global pointer. For exception safety
+        data->load(); //Loads ALL the data
 #ifndef NDEBUG //For debugging
-    data->printBooks();
-    data->printAuthors();
-    data->printGenres();
-    std::cout << std::endl;
-    std::cout << path << std::endl;
-    data->printCredentials(false);
-    std::cout << std::endl;
-    data->printCredentials(true);
-    std::cout << std::endl;
+    std::cout << data->printGroups() << data->printEvents() << '\n' << path << '\n'
+    << data->printCredentials(false) << '\n' << data->printCredentials(true) << std::endl;
     getch();
 #endif
     bool workin = true, first = true; //The first time we don't clear the screen to show the user the info from data->load()
@@ -645,15 +624,18 @@ int main(int, char* argv[]) try {
         }
     }
     data->save(); //Saving only before exiting only to avoid corrupting the database
+    plog->put("Reached end of the program");
     return EXIT_SUCCESS;
 }
 catch (std::exception& e) {//If an exception is thrown, the program 100% can't continue. RIP.
     std::cerr << "Critical Error: " << e.what() << "\n The program cannot continue. Press any key to exit..." << std::endl;
+    plog->put("Exception", e.what());
     getch();
     return (EXIT_FAILURE);
 }
 catch (...) { //Sometimes we can get something completely random. In this case we just exit
     std::cerr << "Undefined Error. \n The program cannot continue. Press any key to exit..." << std::endl;
+    plog->put("Unhandled exception");
     getch();
     return (EXIT_FAILURE);
 }

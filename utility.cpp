@@ -1,7 +1,7 @@
 #include "header.h"
 #include "lib/sha256.h" //Encryption
-#include <regex> //For checking date
 #include <random> //For genID()
+#include <filesystem>
 
 void pause() {
     std::cout << "Press any key to continue..." << std::endl;
@@ -25,7 +25,7 @@ unsigned getCurYear() {
     return (unsigned) nowTm->tm_year + 1900; //return the year.
 }
 
-bool checkDate(const std::string& s) {
+bool checkDate(std::string& s) {
     std::regex reg(R"((\d{1,2})([-. /])(\d{1,2})([-. /])(\d{4}))"); //Initialize the regular expression
     std::smatch res;
     auto msgFalse = [& s](const std::string& what) { //lambda
@@ -43,13 +43,13 @@ bool checkDate(const std::string& s) {
         if (day == 0 && month == 0 && year == 0)
             return true; //We are allowed to input 0.0.0000 and it's considered unknown date
         //Start checking year,month,day
-        if (year > (nowTm->tm_year + 1900))
+      /*  if (year > (nowTm->tm_year + 1900))
             return msgFalse("This year is in the future: " + std::to_string(year));
         else if ((year == nowTm->tm_year + 1900) && month > nowTm->tm_mon + 1)
             return msgFalse("This month is in the future: " + std::to_string(month));
         if (month > 12)
             return msgFalse("More than 12 months");
-        switch (month) {
+      */  switch (month) {
             case 1:
             case 3:
             case 5:
@@ -78,6 +78,7 @@ bool checkDate(const std::string& s) {
             default:
                 throw std::invalid_argument("Default case when parsing month");
         }
+        s = res.str(1) + '.' + res.str(3) + '.' + res.str(5); //TODO: TEST: CHANGES THE STRING
         return true;
     }
     else
@@ -92,37 +93,50 @@ bool checkYear(const std::string& s) {
     return (std::stoul(s) <= getCurYear());
 }
 
-bool checkString(const std::string& s, char mode) {
+bool checkString(std::string& s, char mode) {
     auto msgFalse = [& s](const std::string& msg) {
         std::cerr << "The value " << s << " is invalid: \n" << msg << std::endl;
         return false;
     };
     if (s.empty())
         return msgFalse("No data?");
+    size_t cnt = 0;
     switch (mode) {
-        case 'p': //Password contains the same chars as a normal string (word)
-        case 'n': //No spaces allowed
+        case 'p': //password
+        case 'n': //No spaces
             if (s.size() < 3 || s.size() > 75) return msgFalse("too short/long for a word");
-            for (auto ch: s)
-                if (!(isalnum(ch) || ch == '.' || ch == '-' || ch == '_' || ch == '\''))
+            for (auto& ch: s)
+                if (!(isalnum(ch) || ch == '.' || ch == '-' || ch == '_' || ch == '\'' || ch == '#'))
                     return msgFalse("invalid characters");
             break;
-        case 's': //Line (s) has less strict restrictions and can contain spaces
+        case 's': //spaces
             if (s.size() < 2) return msgFalse("too short/long for a line");
-            for (auto ch: s)
+            for (auto& ch: s)
                 if (!(isalnum(ch) || ispunct(ch) || ch == ' '))
                     return msgFalse("invalid characters");
             break;
-        case 'd': //Delegates
+        case 'd': //date
             return (checkDate(s));
-        case 'i': //I stands for integer, or ID only digits, no negatives.
+        case 'i': //integer
             if (s.size() > MAX_ID_LENGTH) return msgFalse("too long for a number");
-            for (auto ch: s)
+            for (auto& ch: s)
                 if (!isdigit(ch))
                     return msgFalse("invalid characters in a number");
             break;
-        case 'y': //Delegates
+        case 'y': //year
             if (!checkYear(s)) return msgFalse("invalid year");
+            break;
+        case 'f': //float
+            if (s.empty() || s.size() > 7) return msgFalse("too short/long for floating-point number");
+            for (auto& ch: s) {
+                if (!isdigit(ch) && ch != '.')
+                    return msgFalse("invalid characters in a number");
+                if (ch == '.') ++cnt;
+                if (cnt > 1) return msgFalse("not a number");
+            }
+            break;
+        case 'b': //bool
+            if (s.size() != 1 || (s[0] != '0' && s[0] != '1')) return msgFalse("not a boolean");
             break;
         default:
             throw std::invalid_argument("Bad argument for checkString");
@@ -177,4 +191,21 @@ ull stoid(const std::string& s) {
 #else //This function depends on the platform. See header.h for details
     return std::stoul(s);
 #endif
+}
+
+void setTableProperties(fort::char_table& t, unsigned firstColored, unsigned secondColored) //Edit the given table (for uniform look)
+{
+    t.set_cell_text_align(fort::text_align::center);
+    t.set_border_style(FT_BASIC2_STYLE);
+    t.column(firstColored).set_cell_content_fg_color(fort::color::green);
+    t.column(secondColored).set_cell_content_fg_color(fort::color::red);
+}
+
+void ensureFileExists(const std::string& f) {
+    if (!std::filesystem::exists(path + f)) //Check if the file exists
+    {//If not
+        plog->put("The file", path, f, "does not exist! Creating a blank one...");
+        std::ofstream file(path + f); //Create a new one
+        file.close(); //Explicit
+    }
 }

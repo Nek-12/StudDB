@@ -9,6 +9,7 @@
 #include <fstream>
 #include <regex> //For checking date
 #include <memory>
+#include <typeinfo>
 //#define NDEBUG //Forbid debugging output in the release version (explicit, but can be defined by CMake automatically)
 #ifndef __linux__
 #include <conio.h>
@@ -101,7 +102,7 @@ private:
         f << t << " ";
         _put(args...);
     }
-    explicit Log(const std::string& name) : fname(name), f(name, std::fstream::out | std::fstream::ate) {
+    explicit Log(const std::string& name) : fname(name), f(name, std::fstream::out | std::fstream::app) {
         if (!f) throw std::runtime_error("Error opening log file " + fname);
         put("-------------| Started log session |-------------");
     }

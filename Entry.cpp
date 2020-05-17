@@ -10,11 +10,23 @@ bool Entry::link(Entry* e) {
     return (links.insert(e).second && e->links.insert(this).second);
 }
 bool Entry::unlink(Entry* e) {
+    if (e == nullptr ) {
+        plog->put(getName(), "got nullptr on their unlink!");
+        return false;
+    }
+    plog->put("called unlink on ", getName(), "and",e->getName());
     if (typeid(*this) == typeid (*e) ) return false;
-    plog->put("called unlink on ", getName());
     return (links.erase(e) && e->links.erase(this));
 }
 
+void Entry::unlink(const size_t& pos) {
+    if (pos >= links.size()) throw std::invalid_argument("Deleting genre past the end of book " + getName()); //Should never happen though
+    auto it = links.begin();
+    std::advance(it, pos); //Set doesn't have a random-access iterator, so this will suffice.
+    links.erase(it); //Remove it
+}
+
+////STUDENT
 std::string Student::to_string() const {
     fort::char_table t; //Make a nice table
     t << fort::header << "Name" << "Events" << "Degree" << "Birthdate" << "Age" << "GPA" << "Tuition" << "ID" << fort::endr;
@@ -27,7 +39,7 @@ std::string Student::to_string() const {
         delim = "\n";
     }
     t << getName() << l.str() << degree << birthdate << getAge() << avgGrade << (isTuition ? "Yes" : "No") <<  id() << fort::endr;
-    setTableProperties(t, 0, 5);
+    setTableProperties(t, 0, 7);
     return t.to_string();
 }
 
@@ -52,7 +64,7 @@ std::string Event::to_string() const {
         delim = "\n";
     }
     t << getName() << p.str() << date << place <<  id() << fort::endr;
-    setTableProperties(t, 0, 7);
+    setTableProperties(t, 0, 4);
     return t.to_string();
 }
 bool Event::check(const std::string& s) const {

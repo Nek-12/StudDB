@@ -18,6 +18,7 @@ int getch() //Getch for linux
     return (ch);
 }
 #endif
+//TODO: Edit comments
 inline void cls() //This function depends on platform
 { system(CLS); }
 bool yesNo(const std::string& msg);
@@ -76,6 +77,27 @@ ull select(const ull& limit) { //Select from some kind of range, used in search 
     }
 }
 
+void sortResults(std::vector <Entry*>& v) {
+    std::cout << SORT_RESULTS_OPTIONS << std::endl;
+    while(true) {
+        switch (getch()) {
+            case '1':
+                std::sort(v.begin(),v.end(),[](Entry* left, Entry* right){ return left->getName() < right->getName();});
+                return;
+            case '2':
+                std::sort(v.begin(),v.end(),[](Entry* left, Entry* right){ return left->getName() > right->getName();});
+                return;
+            case '3':
+                std::sort(v.begin(),v.end(),[](Entry* left, Entry* right){ return left->id() < right->id();});
+                return;
+            case 'q':
+                return;
+            default:
+                break;
+        }
+    }
+}
+
 std::vector<Entry*> search() {
     std::vector<Entry*> sought; //There can be several results depending on our query.
     while (true) {
@@ -88,6 +110,7 @@ std::vector<Entry*> search() {
             std::cerr << "Nothing found." << std::endl;
         }
         else {
+            if (sought.size() >= 3) sortResults(sought);
             std::cout << "Found: " << std::endl;
             for (auto el: sought)
                 std::cout << *el << std::endl; //Print
@@ -121,174 +144,110 @@ void addEntries(Entry* pe) {
             std::cout << "Please select a valid entry to link with " << pe->getName() << " !" << std::endl;
     }
 }
-/*
-Author* newAuthor() {//Add a new author and, if needed, provide a recursion to add something else.
+
+Event* newEvent() {//Add a new author and, if needed, provide a recursion to add something else.
     cls();
-    std::string n, d, c;
+    std::string n, d, p;
     ull id = inputID();
-    std::cout << "Enter author's credentials" << std::endl;
+    std::cout << "Enter the event's title" << std::endl;
     while (!readString(std::cin, n, 's'));
-    std::cout << "Enter the author's birthdate" << std::endl;
+    std::cout << "Enter the place " << std::endl;
+    while (!readString(std::cin, p, 's'));
+    std::cout << "Enter the date" << std::endl;
     while (!readString(std::cin, d, 'd'));
-    std::cout << "Enter the author's country" << std::endl;
-    while (!readString(std::cin, c, 's'));
-    Author* added = data->addAuthor(id, n, d, c, id);
+    Event* added = data->addEvent(id, n, d, p);
     if (!added) {
-        std::cout << "Such author already exists" << std::endl;
+        std::cout << "Such event already exists" << std::endl;
         return nullptr;
     }
     addEntries(added);
-    std::cout << "Successfully added author " << n << std::endl;
+    std::cout << "Successfully added the event " << n << std::endl;
     pause();
     return added;
 }
 
-Book* newBook() {//The same logic as in the newGenre() see below
-    cls();
-    std::string n, a, y;
-    ull id = inputID();
-    std::cout << "Enter the title of the book" << std::endl;
-    while (!readString(std::cin, n, 's'));
-    std::cout << "Enter the year the book was published" << std::endl;
-    while (!readString(std::cin, y, 'y'));
-    Book* added = data->addBook(id, n, stoid(y), id);
-    if (!added) {
-        std::cerr << "Such book already exists." << std::endl;
-        return nullptr;
+Student* newStudent() {
+    std::string temp, name, degree, date;
+    float grade;
+    ull id, gid;
+    std::cout << "Enter the group's #" << std::endl;
+    while (!readString(std::cin, temp, 'i')); //Once we read the group no
+    gid = stoid(temp);
+    if(!data->findGroup(gid) ) {
+        if (yesNo("Group not found. Add a new one?")) data->addGroup(gid);
+        else return nullptr;
     }
-    addEntries(added);
-    std::cout << "Successfully added your book" << std::endl;
-    pause();
-    return added;
-}
-
-Genre* newGenre() {
-    std::string temp;
-    std::cout << "Enter the new genre's name" << std::endl;
-    while (!readString(std::cin, temp, 's')); //Once we read the name
-    ull id = inputID();
-    Genre* added = data->addGenre(id, temp, id); //Add new genre to the Data
+    id = inputID();
+    std::cout << "Enter the new student's name" << std::endl;
+    while (!readString(std::cin, name, 's'));
+    std::cout << "Enter the new student's degree" << std::endl;
+    while (!readString(std::cin, degree, 's'));
+    std::cout << "Enter the new student's birthdate" << std::endl;
+    while (!readString(std::cin, date, 'd'));
+    bool tuition = yesNo("Are they on tuition?");
+    std::cout << "Enter the new student's GPA" << std::endl;
+    while (!readString(std::cin, temp, 'f'));
+    grade = stof(temp);
+    Student* added = data->addStudent(gid, id, name, degree, date,tuition,grade);
     if (!added) //If wasn't added
     {
-        std::cerr << "Such genre already exists." << std::endl;
+        std::cerr << "Such student already exists." << std::endl;
         pause();
         return nullptr; //Return nothing
     }
     addEntries(added);
-    std::cout << "Successfully added your genre" << std::endl;
+    std::cout << "Successfully added "<< added->getName() << " to group #" << gid << std::endl;
     pause();
     return added;
 }
 
-void editBookEntries(Book* pb)  {//Books are more complicated, so special menu
-    if (pb == nullptr) return;
-    while (true) {
-        cls();
-        std::cout << *pb << std::endl;
-        std::cout << "Select an option for book " << pb->getName() <<
-                  "\n1 -> Add entries to the book "
-                  "\n2 -> Remove authors from the book "
-                  "\n3 -> Remove genres from the book "
-                  "\nq -> Go back" << std::endl;
-        switch (getch()) {
-            case '1':
-                addEntries(pb); //Dynamic binding
-                break;
-            case '2':
-                std::cout << "Select an author's #: " << std::endl;
-                pb->remAuthor(select(pb->enumAuthors()) - 1);
-                std::cout << "Removed successfully" << std::endl;
-                pause();
-                break;
-            case '3':
-                std::cout << "Select a genre's #: " << std::endl;
-                pb->remGenre(select(pb->enumGenres()) - 1);
-                std::cout << "Removed successfully" << std::endl;
-                pause();
-                break;
-            case 'q':
-                return;
-            default:
-                break;
-        }
-    }
-}
-
-void manageBook(Book* pb) {
+void manageStudent(Student* ps) {
     std::string temp;
+    auto suc = []() {std::cout << "Changed successfully." << std::endl; };
     while (true) {
         cls();
-        std::cout << *pb << std::endl;
-        std::cout << EDIT_BOOK_OPTIONS << std::endl;
-        switch (getch()) {
-            case '1':
-                std::cout << "Enter the new title of the book: " << std::endl;
-                while (!readString(std::cin, temp, 's'));
-                pb->rename(temp);
-                std::cout << "Changed successfully." << std::endl;
-                break;
-            case '2':
-                std::cout << "Enter the new publishing year of the book: " << std::endl;
-                while (!readString(std::cin, temp, 'y'));
-                pb->setYear(stoid(temp)); //safe to stoid
-                std::cout << "Changed successfully." << std::endl;
-                break;
-            case '3':
-                editBookEntries(pb); //To add and remove
-                return;
-            case '4':
-                if (yesNo("Delete this record?")) {
-                    if (data->erase(*pb))
-                        std::cout << "Erased this book and removed all references." << std::endl;
-                    else std::cout << "Couldn't erase this entry!" << std::endl;
-                    pause();
-                    return;
-                }
-                else return;
-            case 'q':
-                return;
-            default :
-                break;
-        }
-    }
-}
-void manageAuthor(Author* pa) {
-    std::string temp;
-    while (true) {
-        cls();
-        std::cout << *pa << std::endl;
-        std::cout << EDIT_AUTHOR_OPTIONS << std::endl;
+        std::cout << *ps << std::endl;
+        std::cout << EDIT_STUDENT_OPTIONS << std::endl;
         switch (getch()) {
             case '1':
                 std::cout << "Enter the new name for the author: " << std::endl;
                 while (!readString(std::cin, temp, 's'));
-                pa->rename(temp);
-                std::cout << "Changed successfully." << std::endl;
+                ps->rename(temp);
+                suc();
                 break;
             case '2':
-                std::cout << "Enter the new birthdate: " << std::endl;
-                while (!readString(std::cin, temp, 'd'));
-                pa->setDate(temp); //We can accept the 0.0.0000 as Tnown date.
-                std::cout << "Changed successfully." << std::endl;
+                std::cout << "Enter the new degree: " << std::endl;
+                while (!readString(std::cin, temp, 's'));
+                ps->setDegree(temp);
+                suc();
                 break;
             case '3':
-                std::cout << "Enter the new country: " << std::endl;
-                while (!readString(std::cin, temp, 's'));
-                pa->setCountry(temp); //There could be countries that use ' or - or spaces in their names
-                std::cout << "Changed successfully." << std::endl;
+                std::cout << "Enter the new birthdate: " << std::endl;
+                while (!readString(std::cin, temp, 'd'));
+                ps->setBirthDate(temp);
+                suc();
                 break;
             case '4':
-                addEntries(pa); //We can add entries to anything
+                if (yesNo("Switch tuition?")) ps->switchTuition();
                 break;
             case '5':
-                std::cout << "Select a book's #: " << std::endl; //Once printed, there are numbers in our table
-                pa->remBook(select(pa->enumBooks()) - 1); //Select the number
-                std::cout << "Removed successfully" << std::endl;
-                pause();
+                std::cout << "Enter the new average grade: " << std::endl;
+                while (!readString(std::cin, temp, 'f'));
+                ps->setAvgGrade(std::stof(temp));
+                suc();
                 break;
             case '6':
+                addEntries(ps); //We can add entries to anything
+                break;
+            case '7':
+                std::cout << "Select an event's #: " << std::endl; //Once printed, there are numbers in our table
+                ps->unlink(select(ps->enumLinks() ) - 1);
+                suc();
+                pause();
+                break;
+            case '8':
                 if (yesNo("Delete this record?")) {
-                    data->erase(*pa);
+                    data->erase(ps);
                     std::cout << "Erased this author and removed all references." << std::endl;
                     pause();
                     return;
@@ -302,44 +261,47 @@ void manageAuthor(Author* pa) {
     }
 }
 
-void manageGenre(Genre* pg) {//Specialized actions for every entry
+void manageEvent(Event* pev) {//Specialized actions for every entry
     std::string temp;
-    Entry* pe;
     while (true) {
         cls();
-        std::cout << *pg << std::endl; //Print what we are editing
-        std::cout << EDIT_GENRE_OPTIONS << std::endl;
+        std::cout << *pev << std::endl; //Print what we are editing
+        std::cout << EDIT_EVENT_OPTIONS << std::endl;
         switch (getch()) {
             case '1':
-                std::cout << "Enter the new genre's title" << std::endl;
+                std::cout << "Enter the new event's title" << std::endl;
                 while (!readString(std::cin, temp, 's'));
-                pg->rename(temp);
+                pev->rename(temp);
                 std::cout << "Renamed to " << temp << std::endl;
                 pause();
-                return;
+                break;
             case '2':
-                addEntries(pg);
-                return;
-            case '3': //For genres, there can be thousands of books, so we have to search for the one we want to remove.
-                pe = selectEntry();
-                if (typeid(*pe) == typeid(Book)) //If we selected a book
-                {
-                    if (yesNo("Remove book " + pe->getName() + " from genre " + pg->getName() + "?")) {
-                        if (pg->unlink(static_cast<Book*>(pe))) //Unlink If exists (just to be sure)
-                            std::cout << "Removed successfully" << std::endl;
-                        else std::cout << "Couldn't remove this entry!" << std::endl;
-                        pause();
-                    }
-                    break;
-                }
-                else {
-                    std::cout << "Please select a book! " << std::endl; //Else get outta here
-                    break;
-                }
+                std::cout << "Enter the new event's place" << std::endl;
+                while (!readString(std::cin, temp, 's'));
+                pev->setPlace(temp);
+                std::cout << "Changed the place to " << temp << std::endl;
+                pause();
+                break;
+            case '3':
+                std::cout << "Enter the new event's date" << std::endl;
+                while (!readString(std::cin, temp, 'd'));
+                pev->setDate(temp);
+                std::cout << "Changed the date to " << temp << std::endl;
+                pause();
+                break;
             case '4':
+                addEntries(pev);
+                break;
+            case '5':
+                std::cout << "Select a participant's #: " << std::endl; //Once printed, there are numbers in our table
+                pev->unlink(select(pev->enumLinks() ) - 1); //Select the number
+                std::cout << "Removed successfully" << std::endl;
+                pause();
+                break;
+            case '6':
                 if (yesNo("Delete this record?")) {
                     std::cout << "Erased this genre and removed all references." << std::endl;
-                    data->erase(*pg);
+                    data->erase(pev);
                     pause();
                     return;
                 }
@@ -351,6 +313,7 @@ void manageGenre(Genre* pg) {//Specialized actions for every entry
         }
     }
 }
+
 void manageEntry() {//Uses RTTI to know which entry we are editing.
     Entry* pe = selectEntry(); //Find an entry to edit and select it
     if (!pe) return;
@@ -359,7 +322,7 @@ void manageEntry() {//Uses RTTI to know which entry we are editing.
     else if (typeid(*pe) == typeid(Event))
         manageEvent(static_cast<Event*>(pe)); //Static cast is SAFE since we got the typeid match
 }
-*/
+
 void showData() {
     std::string temp;
     ull gid;
@@ -385,6 +348,22 @@ void showData() {
                 std::cout << data->printStudents(gid);
                 pause();
                 return;
+            case '4':
+                cls();
+                std::cout << "Enter the group #: " << std::endl;
+                while (!readString(std::cin, temp, 'i'));
+                gid = stoid(temp);
+                if (data->findGroup(gid)) {
+                    std::cout << "Enter the selection property: " << std::endl;
+                    while (!readString(std::cin, temp, 's'));
+                    auto res = data->sieve(gid, temp);
+                    std::cout << "Found: " << std::endl;
+                    for (auto el: res)
+                        std::cout << *el << std::endl; //Print
+                    pause();
+                } else
+                    std::cout << "No such group exists" << std::endl;
+                return;
             case 'q':
                 return;
             default:
@@ -407,16 +386,13 @@ void management(bool isadmin) {//Differentiates between right levels
                 showData(); //Show tables
                 break;
             case '3':
-                //if (isadmin) manageEntry(); //For admins: create and manage entries
+                if (isadmin) manageEntry(); //For admins: create and manage entries
                 break;
             case '4':
-                //if (isadmin) newBook();
+                if (isadmin) newStudent();
                 break;
             case '5':
-                //if (isadmin) newAuthor();
-                break;
-            case '6':
-                //if (isadmin) newGenre();
+                if (isadmin) newEvent();
                 break;
             default:
                 break;
@@ -491,9 +467,8 @@ void createAccPrompt(bool isadmin) {
     }
     if (!passConfirm(p)) return;
     data->addAccount(l, p, isadmin);
-    std::cout << "Successfully created account " << l << " ! Forwarding..." << std::endl;
+    std::cout << "Successfully created account " << l << " ! Going back..." << std::endl;
     pause();
-    if (!isadmin) console(l, false); //If the acc was created for user we can log him in instantly
 }
 
 bool delDialog(const std::string& l, bool isadmin) {
@@ -532,11 +507,15 @@ void console(const std::string& usr, bool isadmin) {
                 passChange(usr, isadmin);
                 break;
             case '3':
-                if (isadmin) createAccPrompt(isadmin); //Conditional statements
+                if (isadmin) createAccPrompt(true); //Conditional statements
                 else continue;
                 break;
             case '4':
                 if (isadmin) manageUsr();
+                else continue;
+                break;
+            case '5':
+                if (isadmin) createAccPrompt(false);
                 else continue;
                 break;
             case '0':
@@ -593,7 +572,6 @@ int main(int, char* argv[]) try {
     path.erase(path.find_last_of('\\') + 1); //Makes 'path' be the path to the app folder, removing program name
 //Try function block for convenience. Argc is unused, argv is an array of char arrays, each with an argument, first is path
     plog = Log::init(path + "log.txt");
-    plog->print();
     data = Data::getInstance(); //Assign to our global pointer. For exception safety
         data->load(); //Loads ALL the data
 #ifndef NDEBUG //For debugging
@@ -613,8 +591,7 @@ int main(int, char* argv[]) try {
                 workin = false;
                 break;
             case '1':
-                if (yesNo("Have you got an account?")) login(false); //Ask for an account and if yes (true) log the user in
-                else createAccPrompt(false); //false means NOT admin
+                login(false);
                 break;
             case '2':
                 login(true); //log the admin in

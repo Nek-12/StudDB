@@ -35,7 +35,7 @@ bool checkDate(std::string& s) {
 //If the format is right
     if (std::regex_match(s, res, reg)) {
         time_t t = time(nullptr);
-        tm* nowTm = localtime(&t);
+        tm* nowTm = localtime(&t); //TODO: Add check for future/past date
         int day = std::stoi(res.str(1));
         int month = std::stoi(res.str(3));
         int year = std::stoi(res.str(5)); //Divide into values
@@ -93,7 +93,7 @@ bool checkYear(const std::string& s) {
     return (std::stoul(s) <= getCurYear());
 }
 
-bool checkString(std::string& s, char mode) {
+bool checkString(std::string& s, char mode) { //TODO: Remove messages!
     auto msgFalse = [& s](const std::string& msg) {
         std::cerr << "The value " << s << " is invalid: \n" << msg << std::endl;
         return false;

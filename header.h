@@ -4,6 +4,7 @@ class Entry;
 class Student;
 class Event;
 //TODO: Edit comments
+//TODO: Remove references from primitive types
 //Base class
 /*
  * Each journal entry represents some kind of table row that contains different info for each entry, but the operations are same.
@@ -30,6 +31,7 @@ public:
     void rename(const std::string& s) { name = s; }
     bool link(Entry* e);
     bool unlink(Entry* e);
+    void unlink(const size_t& pos);
     size_t enumLinks() {return links.size();}
 protected: //Constructors are protected to disallow users creating entries in the journal. It's unsafe and makes no sense. Users will use the
     [[nodiscard]] virtual std::string to_string() const = 0;
@@ -49,10 +51,11 @@ public:
     ~Student() override = default;
     Student(Student&& b) = delete;
     [[nodiscard]] unsigned short getAge() const {
-        return getCurYear() - stoi(birthdate.substr(birthdate.find_last_of('.')+1,4));
+        auto age = getCurYear() - stoi(birthdate.substr(birthdate.find_last_of('.')+1,4));
+        return (age == getCurYear()? 0 : age);
     }
     bool switchTuition() { return isTuition = !isTuition; }
-    void setAvgGrade(float& avg) { avgGrade = avg;}
+    void setAvgGrade(const float& avg) { avgGrade = avg;}
     void setDegree(const std::string& d) {degree = d;}
     void setBirthDate(const std::string& d) {birthdate = d;}
 private:
@@ -86,7 +89,10 @@ class Data {  // SINGLETON for storing all the nested structures
 public:
     Data(const Data &) = delete; //No copying, no moving!
     void operator=(const Data&) = delete; //No assigning!
-    ~Data() = default;
+    ~Data() {
+        events.clear(); //TO ensure we don't call a pure virtual, we need a strict order.
+        groups.clear();
+    }
     static Data* getInstance() //Returns a reference to the single static instance of Data.
     {
         static Data instance; //The instance is always one and lazy-evaluated on the first use
@@ -95,14 +101,26 @@ public:
     void load(); //Loads all the data from several files
     void save(); //Writes the data to the files (books.txt etc.)
     std::string printCredentials(bool isadmin);
-    std::vector<Entry*> search(const std::string& s); //Search anything
-    template<typename ...Args>
-    Student* addStudent(const ull& group, const ull& id, const Args& ...args);
-    template<typename ...Args>
-    Event* addEvent(const ull&, const Args& ...args);
-    auto addGroup(const ull& no) {
-        return groups.try_emplace(no); //TODO: Is ok?
+    std::vector<Entry*> search(std::string& s); //Search anything
+    template<typename... Args>
+    Student* addStudent(const ull& gid,const ull& id, const Args& ... args) {
+        plog->put("Called add with args", id, args...);
+        if (groups.find(gid) == groups.end()) return nullptr;
+        for (auto& el: groups[gid])
+            if (el->id() == id )
+                return nullptr;
+        return groups[gid].emplace_back( new Student(id,args...)).get(); //TODO: Bad, dangerous
     }
+    template<typename... Args>
+    Event* addEvent(const ull& id, const Args& ... args) {
+        plog->put("Called add with args", id, args...);
+        for (auto& el: events)
+            if (el->id() == id ) return nullptr;
+        return events.emplace_back( new Event(id,args...)).get();
+    }
+    std::vector<Entry*> sieve(ull,std::string& str);
+    auto addGroup(const ull& no) { return groups.try_emplace(no);}
+    bool findGroup(const ull g) { return groups.find(g) != groups.end();}
     void erase(Student* s);
     bool erase(const ull& g);
     void erase(Event* e);
@@ -118,7 +136,7 @@ public:
     bool addAccount(const std::string& l, const std::string& p, const bool& isadmin) {
         return (isadmin ? admins : users).try_emplace(l, hash(p)).second;
     }
-    size_t enumAccounts(const bool& isadmin) //Constant time ofc
+    size_t enumAccounts(const bool& isadmin)
     { return (isadmin ? admins.size() : users.size()); }
     bool changePass(const std::string& l, const std::string& p, const bool& isadmin) {
         auto it = (isadmin ? admins : users).find(l);
@@ -140,15 +158,16 @@ private:
 #define PASSCONFIRM  "Confirm the password or enter \"exit\" to exit: "
 #define ADMIN_CONSOLE_ENTRIES    ":ADMIN:"\
                                  "\nSelect an option: "\
-                                 "\n1 -> Manage book data "\
+                                 "\n1 -> Manage entry data "\
                                  "\n2 -> Change your password"\
                                  "\n3 -> Register an administrator"\
                                  "\n4 -> Delete users "\
+                                 "\n5 -> Add users"\
                                  "\n0 -> Delete your account (careful!)"\
                                  "\nq -> Sign off"
 #define USER_CONSOLE_ENTRIES    ":USER:"\
                                 "\nSelect an option: "\
-                                "\n1 -> Manage book data "\
+                                "\n1 -> Manage entry data "\
                                 "\n2 -> Change your password"\
                                 "\n0 -> Delete your account"\
                                 "\nq -> Sign off"
@@ -157,9 +176,8 @@ private:
                                     "\n1 -> Search anything "\
                                     "\n2 -> Show data "\
                                     "\n3 -> Manage entries "\
-                                    "\n4 -> Add a new book"\
-                                    "\n5 -> Add a new author"\
-                                    "\n6 -> Add a new genre "\
+                                    "\n4 -> Add a new student"\
+                                    "\n5 -> Add a new event"\
                                     "\nq -> Go back"
 #define USER_MANAGEMENT_ENTRIES    ":USER:"\
                                    "\nSelect an option: "\
@@ -170,29 +188,35 @@ private:
                                   "\n1 -> Show all groups and students "\
                                   "\n2 -> Show all events "\
                                   "\n3 -> Show all students of a group "\
+                                  "\n4 -> Show all students of a group for a given event"\
                                   "\nq -> Go back"
 #define WELCOME_MENU "Welcome. "\
                      "\n1 -> User sign in "\
                      "\n2 -> Admin sign in "\
                      "\nq -> Save and exit"
-#define EDIT_GENRE_OPTIONS "Select an option: "\
-                             "\n1 -> Rename this genre "\
-                             "\n2 -> Add this genre to books "\
-                             "\n3 -> Remove this genre from books"\
-                             "\n4 -> Delete this genre "\
+#define EDIT_EVENT_OPTIONS "Select an option: "\
+                             "\n1 -> Rename "\
+                             "\n2 -> Change the location "\
+                             "\n3 -> Change the date "\
+                             "\n4 -> Assign students "\
+                             "\n5 -> Remove students "\
+                             "\n6 -> Delete"\
                              "\nq -> Go back"
-#define EDIT_BOOK_OPTIONS   "What would you like to do? "\
-                            "\n1 -> Edit title"\
-                            "\n2 -> Edit publishing year"\
-                            "\n3 -> Edit entries"\
-                            "\n4 -> Delete this book"\
-                            "\nq -> Nothing"
-#define EDIT_AUTHOR_OPTIONS "What would you like to do? "\
+#define EDIT_STUDENT_OPTIONS "What would you like to do? "\
                             "\n1 -> Edit name"\
-                            "\n2 -> Edit birthdate"\
-                            "\n3 -> Edit country"\
-                            "\n4 -> Add books"\
-                            "\n5 -> Remove books"\
-                            "\n6 -> Delete this author"\
+                            "\n2 -> Edit degree"\
+                            "\n3 -> Edit birthdate"\
+                            "\n4 -> Switch the education model"\
+                            "\n5 -> Edit the average grade"\
+                            "\n6 -> Assign to events"\
+                            "\n7 -> Remove from events"\
+                            "\n8 -> Delete"\
                             "\nq -> Nothing"
+#define SORT_RESULTS_OPTIONS "How would you like to sort the result?"\
+                             "\n1 -> By Name Ascending"\
+                             "\n2 -> By Name Descending"\
+                             "\n3 -> By ID"\
+                             "\nq -> Don't care"
+
+
 

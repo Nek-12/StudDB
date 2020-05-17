@@ -1,23 +1,5 @@
 #include "header.h"
 
-template<typename... Args>
-Student* Data::addStudent(const ull& gid,const ull& id, const Args& ... args) {
-    plog->put("Called add with args", id, args...);
-    if (groups.find(gid) == groups.end()) return nullptr;
-    for (auto& el: groups[gid])
-        if (el->id() == id )
-            return nullptr;
-    return groups[gid].emplace_back( new Student(id,args...)).get(); //TODO: Bad, dangerous
-}
-
-template<typename... Args>
-Event* Data::addEvent(const ull& id, const Args& ... args) {
-    plog->put("Called add with args", id, args...);
-    for (auto& el: events)
-        if (el->id() == id ) return nullptr;
-    return events.emplace_back( new Event(id,args...)).get();
-}
-
 void Data::erase(Student* s) {
     plog->put("Called erase on", s->getName());
     for (auto& g: groups)
@@ -30,10 +12,10 @@ void Data::erase(Student* s) {
 void Data::erase(Event* e) {
     plog->put("Called erase on", e->getName());
     for (auto it = events.begin(); it != events.end(); ++it)
-            if (e->id() == (*it)->id()) {
-                events.erase(it);
-                return;
-            }
+        if (e->id() == (*it)->id()) {
+            events.erase(it);
+            return;
+        }
 }
 
 bool Data::erase(const ull& g) {
@@ -55,8 +37,7 @@ std::string Data::printGroups() {
     }
     return ss.str();
 }
-std::string Data::printStudents(const ull& gid)
-{
+std::string Data::printStudents(const ull& gid) {
     fort::char_table t;
     const auto& g = groups.find(gid);
     if (g == groups.cend()) return "No such group #" + std::to_string(gid) + " exists";
@@ -70,13 +51,13 @@ std::string Data::printStudents(const ull& gid)
             ev << delim << i << '.' << l->getName(); //Add numbers to select something later
             delim = '\n';
         }
-        t << s->getName() << ev.str() << s->degree  << s->birthdate << s->getAge() << s->avgGrade << (s->isTuition ? "Yes" : "No") <<  s->id() << fort::endr;
+        t << s->getName() << ev.str() << s->degree << s->birthdate << s->getAge() << s->avgGrade << (s->isTuition ? "Yes" : "No") << s->id()
+          << fort::endr;
     }
     setTableProperties(t, 0, 7);
-    return t.to_string() + "\n";
+    return t.to_string();
 }
-std::string Data::printEvents()
-{
+std::string Data::printEvents() {
     fort::char_table t;
     t << fort::header << "Name" << "Participants" << "Place" << "Date" << "ID" << fort::endr;
     for (const auto& e: events) {
@@ -89,10 +70,10 @@ std::string Data::printEvents()
             delim = '\n';
 
         }
-        t << e->getName() << ss.str() << e->place << e->date  << e->id() << fort::endr; //Output
+        t << e->getName() << ss.str() << e->place << e->date << e->id() << fort::endr; //Output
     }
     setTableProperties(t, 0, 4);
-    return t.to_string() + "\n";
+    return t.to_string();
 }
 bool Data::delAccount(const std::string& l, const bool& isadmin) {
     if (isadmin) //For admins and users
@@ -118,16 +99,34 @@ std::string Data::printCredentials(bool isAdmin) {
     return ss.str();
 }
 
-
-std::vector<Entry*> Data::search(const std::string& str) //Search anything
+std::vector<Entry*> Data::search(std::string& str) //Search anything
 {
     std::vector<Entry*> ret; //Create the result
     plog->put("Started data.search()");
-    for (auto& g : groups)
-        for (auto& s: g.second)
-            if (s->check(str)) ret.push_back(s.get()); //Without the DB no better choice //Check every entry linearly
     for (auto& e : events)
         if (e->check(str)) ret.push_back(e.get()); //TODO: Bad dirty and dangerous
+    if (checkString(str, 'i')) {
+        ull no = stoid(str);
+        auto gr = groups.find(no);
+        if (gr != groups.end())
+            for (auto& el: gr->second)
+                ret.push_back(el.get());
+    }
+    else
+        for (auto& g : groups)
+            for (auto& s: g.second)
+                if (s->check(str)) ret.push_back(s.get());
+    return ret;
+}
+
+std::vector<Entry*> Data::sieve(ull gid,std::string& str) //Search anything
+{
+    std::vector<Entry*> ret; //Create the result
+    plog->put("Started data.sieve()");
+    auto gr = groups.find(gid);
+    if (gr != groups.end())
+        for (auto& el: gr->second)
+            if (el->check(str) ) ret.push_back(el.get());
     return ret;
 }
 
@@ -137,7 +136,7 @@ void Data::load() try //Try-catch function block
 {
     plog->put("Called data.load()");
     std::string tempA, tempB, name = "user.txt"; //Reusable
-    auto fexc = [& name](const std::string& what) {throw std::invalid_argument("File: " + name + " couldn't read " + what);};
+    auto fexc = [& name](const std::string& what) { throw std::invalid_argument("File: " + name + " couldn't read " + what); };
     ensureFileExists(name); //Make sure
     std::ifstream f(path + name); //Open using the path
     auto eof = [&f]() //Lambda to check for the end of file.
@@ -190,17 +189,19 @@ void Data::load() try //Try-catch function block
     f.open(path + name);
     std::string tempE, tempF, tempG;
     std::string gid;
+    std::pair<decltype(groups.begin()), bool> group = std::make_pair(groups.end(), 0);
     while (f) {  //id, name, degree, date, tuition, grade
-        std::pair<decltype(groups.begin()), bool> group = std::make_pair(groups.end(),0) ;
         plog->put("Starting to parse a new group");
-        while(!eof()) {
-            std::getline(f,tempA);
+        while (!eof()) {
+            std::getline(f, tempA);
             if (tempA.empty()) fexc("ID");
             if (tempA[0] == '#') {
                 plog->put("Found gid:", tempA);
-                tempA.erase(0,1);
+                tempA.erase(0, 1);
                 if (!checkString(tempA, 'i')) fexc("Group ID");
                 gid = tempA;
+                group = addGroup(stoid(gid));
+                plog->put((group.second ? "Added group" : "Couldn't add group"), gid);
                 break;
             }
             if (!checkString(tempA, 'i')) fexc("ID");
@@ -210,18 +211,18 @@ void Data::load() try //Try-catch function block
             if (!readString(f, tempE, 'd')) fexc("date");
             if (!readString(f, tempF, 'b')) fexc("tuition");
             if (!readString(f, tempG, 'f')) fexc("grade");
-            Student* ps = addStudent(stoid(gid),stoid(tempA),tempB,tempD,tempE,std::stoi(tempF),std::stof(tempG));
+            Student* ps = addStudent(stoid(gid), stoid(tempA), tempB, tempD, tempE, std::stoi(tempF), std::stof(tempG));
             std::stringstream ss(tempC);
             while (getline(ss, tempC, ',')) { //May change it
                 if (!checkString(tempC, 'i')) fexc("student's event ID");
                 ull sid = stoid(tempC);
-                auto sought = std::find_if(events.begin(),events.end(),
-                        [&sid](std::unique_ptr<Event>& pev) { return sid == pev->id(); }); //Search for that ID and save
+                auto sought = std::find_if(events.begin(), events.end(),
+                                           [&sid](std::unique_ptr<Event>& pev) { return sid == pev->id(); }); //Search for that ID and save
                 plog->put("sought.first is: ", (sought != events.end() ? (*sought)->getName() : "NULL"));
                 if (sought == events.end()) //If we didn't find anything
                 {
                     plog->put("Creating new unknown event and linking with", ps->getName());
-                    addEvent(stoid(tempD), "Unknown event", "0.0.0000","Unknown")->link(ps); //Handle the error, create a blank entry
+                    addEvent(stoid(tempD), "Unknown event", "0.0.0000", "Unknown")->link(ps); //Handle the error, create a blank entry
                 }
                 else {
                     plog->put("Linking", (*sought)->getName(), "+", ps->getName());
@@ -229,10 +230,7 @@ void Data::load() try //Try-catch function block
                 }
                 tempC.clear(); //We will need it later
             }
-
         }
-        group = addGroup(stoid(gid));
-        plog->put((group.second ? "Added group" : "Couldn't add group"), gid);
     }
 } //Finished linking
 catch (...) {
@@ -260,6 +258,7 @@ void Data::save() {
     f.close();
     f.open(path + "Students.txt");
     for (auto& g : groups) {
+        if (g.second.empty()) continue; //Skip empty groups
         f << "#" << g.first << std::endl;
         for (auto& s : g.second) {
             f << std::setw(MAX_ID_LENGTH) << s->id() << '\n'

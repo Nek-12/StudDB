@@ -118,6 +118,9 @@ std::string checkString(std::string& s, char mode) {
         case 'l': //date future
             if (!checkDate(s, false)) return msgFalse("Wrong date");
             else return "";
+        case 'd': //date any
+            if (!checkDate(s, -1)) return msgFalse("Wrong date");
+            else return "";
         case 'i': //integer
             if (s.size() > MAX_ID_LENGTH) return msgFalse("too long for a number");
             for (auto& ch: s)

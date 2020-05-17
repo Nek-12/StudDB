@@ -36,19 +36,18 @@ SOFTWARE.
 #ifndef LIBFORT_HPP
 #define LIBFORT_HPP
 
-#include <c++/9.3.0/string>
-#include <c++/9.3.0/stdexcept>
-#include <c++/9.3.0/sstream>
+#include <string>
+#include <stdexcept>
+#include <sstream>
 #include "fort.h"
 
-namespace fort
-{
+namespace fort {
 
 /**
  * Alignment of cell content.
  */
-enum class text_align {
-    left   = FT_ALIGNED_LEFT,
+    enum class text_align {
+        left = FT_ALIGNED_LEFT,
     center = FT_ALIGNED_CENTER,
     right  = FT_ALIGNED_RIGHT
 };

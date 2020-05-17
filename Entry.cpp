@@ -1,16 +1,24 @@
 #include "header.h"
+
 Entry::~Entry() {
     plog->put("called destructor on", getName());
     for (auto& el: links)
         unlink(el);
 }
+
+bool Entry::checkLinks(const std::string& str) {
+    for (auto& el: links)
+        if (lowercase(el->getName()).find(lowercase(str)) != std::string::npos) return true;
+    return false;
+}
+
 bool Entry::link(Entry* e) {
-    if (typeid(*this) == typeid (*e) ) return false;
+    if (typeid(*this) == typeid(*e)) return false;
     plog->put("called link on ", getName());
     return (links.insert(e).second && e->links.insert(this).second);
 }
 bool Entry::unlink(Entry* e) {
-    if (e == nullptr ) {
+    if (e == nullptr) {
         plog->put(getName(), "got nullptr on their unlink!");
         return false;
     }
@@ -49,7 +57,8 @@ bool Student::check(const std::string& s) const {
             || lowercase(degree).find(ls) != std::string::npos
             || birthdate.find(s) != std::string::npos
             || s == std::to_string(avgGrade)
-            || s == std::to_string(id()) );
+            || s == std::to_string(id()))
+           || ls == (isTuition ? "tuition" : "scholarship");
 }
 
 std::string Event::to_string() const {

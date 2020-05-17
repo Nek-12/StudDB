@@ -3,7 +3,7 @@ project(Stud)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(GCC_COVERAGE_COMPILE_FLAGS "-static -Wall -Wextra -Wfloat-equal -Wundef -Wcast-align -Wwrite-strings -Wlogical-op -Wredundant-decls -Wshadow -Woverloaded-virtual")
+set(GCC_COVERAGE_COMPILE_FLAGS "-O3 -static -Wall -Wextra -Wfloat-equal -Wundef -Wcast-align -Wwrite-strings -Wlogical-op -Wredundant-decls -Wshadow -Woverloaded-virtual")
 #
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
 

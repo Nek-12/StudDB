@@ -128,7 +128,7 @@ Entry* selectEntry() {
         return sought[0]; //TODO: Maybe we should ask if we want to use the entry found?
     cls();
     for (auto it = sought.begin(); it != sought.end(); ++it) //If more print them and select just one
-        std::cout << "#" << it + 1 - sought.begin() << ":\n" << **it; //There are genres, authors, books, up to user.
+        std::cout << "#" << it + 1 - sought.begin() << ":\n" << **it;
     std::cout << "Select the entry's #: " << std::endl;
     return sought[select(sought.size()) - 1]; //select one
 }
@@ -145,7 +145,7 @@ void addEntries(Entry* pe) {
     }
 }
 
-Event* newEvent() {//Add a new author and, if needed, provide a recursion to add something else.
+Event* newEvent() {
     cls();
     std::string n, d, p;
     ull id = inputID();
@@ -154,7 +154,7 @@ Event* newEvent() {//Add a new author and, if needed, provide a recursion to add
     std::cout << "Enter the place " << std::endl;
     while (!readString(std::cin, p, 's'));
     std::cout << "Enter the date" << std::endl;
-    while (!readString(std::cin, d, 'd'));
+    while (!readString(std::cin, d, CHECK::DATE_FUTURE));
     Event* added = data->addEvent(id, n, d, p);
     if (!added) {
         std::cout << "Such event already exists" << std::endl;
@@ -183,7 +183,7 @@ Student* newStudent() {
     std::cout << "Enter the new student's degree" << std::endl;
     while (!readString(std::cin, degree, 's'));
     std::cout << "Enter the new student's birthdate" << std::endl;
-    while (!readString(std::cin, date, 'd'));
+    while (!readString(std::cin, date, CHECK::DATE_PAST));
     bool tuition = yesNo("Are they on tuition?");
     std::cout << "Enter the new student's GPA" << std::endl;
     while (!readString(std::cin, temp, 'f'));
@@ -210,7 +210,7 @@ void manageStudent(Student* ps) {
         std::cout << EDIT_STUDENT_OPTIONS << std::endl;
         switch (getch()) {
             case '1':
-                std::cout << "Enter the new name for the author: " << std::endl;
+                std::cout << "Enter the new name for the student: " << std::endl;
                 while (!readString(std::cin, temp, 's'));
                 ps->rename(temp);
                 suc();
@@ -223,7 +223,7 @@ void manageStudent(Student* ps) {
                 break;
             case '3':
                 std::cout << "Enter the new birthdate: " << std::endl;
-                while (!readString(std::cin, temp, 'd'));
+                while (!readString(std::cin, temp, CHECK::DATE_PAST));
                 ps->setBirthDate(temp);
                 suc();
                 break;
@@ -248,7 +248,7 @@ void manageStudent(Student* ps) {
             case '8':
                 if (yesNo("Delete this record?")) {
                     data->erase(ps);
-                    std::cout << "Erased this author and removed all references." << std::endl;
+                    std::cout << "Erased this record and removed all references." << std::endl;
                     pause();
                     return;
                 }
@@ -284,7 +284,7 @@ void manageEvent(Event* pev) {//Specialized actions for every entry
                 break;
             case '3':
                 std::cout << "Enter the new event's date" << std::endl;
-                while (!readString(std::cin, temp, 'd'));
+                while (!readString(std::cin, temp, CHECK::DATE_FUTURE));
                 pev->setDate(temp);
                 std::cout << "Changed the date to " << temp << std::endl;
                 pause();
@@ -300,7 +300,7 @@ void manageEvent(Event* pev) {//Specialized actions for every entry
                 break;
             case '6':
                 if (yesNo("Delete this record?")) {
-                    std::cout << "Erased this genre and removed all references." << std::endl;
+                    std::cout << "Erased this event and removed all references." << std::endl;
                     data->erase(pev);
                     pause();
                     return;
@@ -357,12 +357,15 @@ void showData() {
                     std::cout << "Enter the selection property: " << std::endl;
                     while (!readString(std::cin, temp, 's'));
                     auto res = data->sieve(gid, temp);
-                    std::cout << "Found: " << std::endl;
-                    for (auto el: res)
-                        std::cout << *el << std::endl; //Print
-                    pause();
+                    if (!res.empty()) {
+                        std::cout << "Found: " << std::endl;
+                        for (auto el: res)
+                            std::cout << *el << std::endl; //Print
+                    }
+                    else std::cout << "Nothing found" << std::endl;
                 } else
                     std::cout << "No such group exists" << std::endl;
+                pause();
                 return;
             case 'q':
                 return;

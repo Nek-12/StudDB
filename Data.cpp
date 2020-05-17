@@ -40,7 +40,7 @@ std::string Data::printGroups() {
 std::string Data::printStudents(const ull& gid) {
     fort::char_table t;
     const auto& g = groups.find(gid);
-    if (g == groups.cend()) return "No such group #" + std::to_string(gid) + " exists";
+    if (g == groups.cend()) return "No such group #" + std::to_string(gid) + " exists\n";
     t << fort::header << "Name" << "Events" << "Degree" << "Birthdate" << "Age" << "GPA" << "Tuition" << "ID" << fort::endr;
     for (const auto& s: g->second) {
         std::stringstream ev;
@@ -105,7 +105,7 @@ std::vector<Entry*> Data::search(std::string& str) //Search anything
     plog->put("Started data.search()");
     for (auto& e : events)
         if (e->check(str)) ret.push_back(e.get()); //TODO: Bad dirty and dangerous
-    if (checkString(str, 'i')) {
+    if (checkString(str, 'i').empty()) {
         ull no = stoid(str);
         auto gr = groups.find(no);
         if (gr != groups.end())
@@ -124,9 +124,11 @@ std::vector<Entry*> Data::sieve(ull gid,std::string& str) //Search anything
     std::vector<Entry*> ret; //Create the result
     plog->put("Started data.sieve()");
     auto gr = groups.find(gid);
-    if (gr != groups.end())
+    if (gr != groups.end()) {
         for (auto& el: gr->second)
-            if (el->check(str) ) ret.push_back(el.get());
+            if (el->checkLinks(str)) ret.push_back(el.get());
+    }
+    else plog->put("Couldn't find group #", gid);
     return ret;
 }
 
@@ -178,7 +180,7 @@ void Data::load() try //Try-catch function block
         if (eof()) break;
         if (!readString(f, tempA, 'i')) fexc("ID");
         if (!readString(f, tempB, 's')) fexc("name");
-        if (!readString(f, tempC, 'd')) fexc("date");
+        if (!readString(f, tempC, CHECK::DATE)) fexc("date");
         if (!readString(f, tempD, 's')) fexc("place");
         addEvent(stoid(tempA), tempB, tempC, tempD);
     }
@@ -198,23 +200,23 @@ void Data::load() try //Try-catch function block
             if (tempA[0] == '#') {
                 plog->put("Found gid:", tempA);
                 tempA.erase(0, 1);
-                if (!checkString(tempA, 'i')) fexc("Group ID");
+                if (!checkString(tempA, 'i').empty()) fexc("Group ID");
                 gid = tempA;
                 group = addGroup(stoid(gid));
                 plog->put((group.second ? "Added group" : "Couldn't add group"), gid);
                 break;
             }
-            if (!checkString(tempA, 'i')) fexc("ID");
+            if (!checkString(tempA, 'i').empty()) fexc("ID");
             if (!readString(f, tempB, 's')) fexc("name");
             if (!readString(f, tempC, 's')) fexc("events");
             if (!readString(f, tempD, 's')) fexc("degree");
-            if (!readString(f, tempE, 'd')) fexc("date");
+            if (!readString(f, tempE, CHECK::DATE)) fexc("date");
             if (!readString(f, tempF, 'b')) fexc("tuition");
             if (!readString(f, tempG, 'f')) fexc("grade");
             Student* ps = addStudent(stoid(gid), stoid(tempA), tempB, tempD, tempE, std::stoi(tempF), std::stof(tempG));
             std::stringstream ss(tempC);
             while (getline(ss, tempC, ',')) { //May change it
-                if (!checkString(tempC, 'i')) fexc("student's event ID");
+                if (!checkString(tempC, 'i').empty()) fexc("student's event ID");
                 ull sid = stoid(tempC);
                 auto sought = std::find_if(events.begin(), events.end(),
                                            [&sid](std::unique_ptr<Event>& pev) { return sid == pev->id(); }); //Search for that ID and save

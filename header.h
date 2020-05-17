@@ -3,6 +3,7 @@
 class Entry;
 class Student;
 class Event;
+
 //TODO: Edit comments
 //TODO: Remove references from primitive types
 //Base class
@@ -10,12 +11,11 @@ class Event;
  * Each journal entry represents some kind of table row that contains different info for each entry, but the operations are same.
  * This is some kind of merged interface and usual base class. Will be used with dynamic binding later extensively, so I tried to provide
  * A lot of virtual functions to minimize dynamic casts and RTTI which are slow
- * But the nature is such that sometimes we can't avoid casts in my project. At least I couldn't.
 */
 class Entry {
     friend class Data;
     friend std::ostream& operator<<(std::ostream& os, const Entry& e) { //dynamic binding here
-        os << e.to_string(); //each type prints its own info, virtual
+        os << e.to_string(); //Each type prints its own info, virtual
         return os;
     }
     friend bool operator==(const Entry& lhs, const Entry& rhs) //For some containers and functions
@@ -24,7 +24,6 @@ public:
     Entry() = delete; //No blank entries
     Entry(const Entry& e) = delete; //No copies
 //    Copying an entry doesn't make sense. Why would we need several identical lines in our journal?
-//    Entry& operator=(const Entry&) = delete; //No assigning
     virtual ~Entry();
     [[nodiscard]] const ull& id() const { return unique_id; }//We shouldn't discard the returned value for the getter. Would make no sense. Just for safety
     [[nodiscard]] std::string getName() const { return name; }
@@ -32,8 +31,10 @@ public:
     bool link(Entry* e);
     bool unlink(Entry* e);
     void unlink(const size_t& pos);
+    bool checkLinks(const std::string& str);
     size_t enumLinks() {return links.size();}
 protected: //Constructors are protected to disallow users creating entries in the journal. It's unsafe and makes no sense. Users will use the
+    //Appropriate functions from Data
     [[nodiscard]] virtual std::string to_string() const = 0;
     [[nodiscard]] virtual bool check(const std::string& s) const = 0;
     explicit Entry(const ull& id, std::string n) : unique_id(id), name(std::move(n)) {
@@ -56,17 +57,17 @@ public:
     }
     bool switchTuition() { return isTuition = !isTuition; }
     void setAvgGrade(const float& avg) { avgGrade = avg;}
-    void setDegree(const std::string& d) {degree = d;}
-    void setBirthDate(const std::string& d) {birthdate = d;}
+    void setDegree(const std::string& d) { degree = d; }
+    void setBirthDate(const std::string& d) { birthdate = d; }
 private:
     //CONSTRUCTOR
-    explicit Student(const ull& no, const std::string& n, std::string  d,  std::string  b, bool i, float gr)
-            : Entry(no, n), degree(std::move(d)), birthdate(std::move(b)), isTuition(i),avgGrade(gr) {}
+    explicit Student(const ull& no, const std::string& n, std::string d, std::string b, bool i, float gr)
+            : Entry(no, n), degree(std::move(d)), birthdate(std::move(b)), isTuition(i), avgGrade(gr) {}
     [[nodiscard]] bool check(const std::string& s) const override;
     [[nodiscard]] std::string to_string() const override;
     std::string degree;
     std::string birthdate;
-    bool isTuition;
+    bool isTuition; //Are they paying for the education?
     float avgGrade;
 };
 class Event : public Entry {
@@ -90,7 +91,7 @@ public:
     Data(const Data &) = delete; //No copying, no moving!
     void operator=(const Data&) = delete; //No assigning!
     ~Data() {
-        events.clear(); //TO ensure we don't call a pure virtual, we need a strict order.
+        events.clear(); //To ensure we don't call a pure virtual, we need a strict order.
         groups.clear();
     }
     static Data* getInstance() //Returns a reference to the single static instance of Data.
@@ -99,28 +100,28 @@ public:
         return &instance; //Return a pointer to self
     }
     void load(); //Loads all the data from several files
-    void save(); //Writes the data to the files (books.txt etc.)
+    void save(); //Writes the data to the files
     std::string printCredentials(bool isadmin);
     std::vector<Entry*> search(std::string& s); //Search anything
     template<typename... Args>
-    Student* addStudent(const ull& gid,const ull& id, const Args& ... args) {
+    Student* addStudent(const ull& gid, const ull& id, const Args& ... args) {
         plog->put("Called add with args", id, args...);
         if (groups.find(gid) == groups.end()) return nullptr;
         for (auto& el: groups[gid])
-            if (el->id() == id )
-                return nullptr;
-        return groups[gid].emplace_back( new Student(id,args...)).get(); //TODO: Bad, dangerous
+            if (el->id() == id)
+                return nullptr; //Nullptr if we don't have any entries
+        return groups[gid].emplace_back(new Student(id, args...)).get(); //TODO: Don't return raw pointers
     }
     template<typename... Args>
     Event* addEvent(const ull& id, const Args& ... args) {
         plog->put("Called add with args", id, args...);
         for (auto& el: events)
-            if (el->id() == id ) return nullptr;
-        return events.emplace_back( new Event(id,args...)).get();
+            if (el->id() == id) return nullptr;
+        return events.emplace_back(new Event(id, args...)).get();
     }
-    std::vector<Entry*> sieve(ull,std::string& str);
-    auto addGroup(const ull& no) { return groups.try_emplace(no);}
-    bool findGroup(const ull g) { return groups.find(g) != groups.end();}
+    std::vector<Entry*> sieve(ull, std::string& str); //Checks the events in the group
+    auto addGroup(const ull& no) { return groups.try_emplace(no); }
+    bool findGroup(const ull g) { return groups.find(g) != groups.end(); }
     void erase(Student* s);
     bool erase(const ull& g);
     void erase(Event* e);
@@ -148,6 +149,7 @@ public:
 private:
     Data() = default; //private to disallow creation
     std::map<ull,std::vector<std::unique_ptr<Student>>> groups;
+    //Groups are stored in a map where the key is the group #, and each group contains a vector of pointers to Students, allocated on the heap
     std::vector<std::unique_ptr<Event>> events;
     std::map<std::string, std::string> users; // holds <login, password> (hashed)
     std::map<std::string, std::string> admins; //same
@@ -188,7 +190,7 @@ private:
                                   "\n1 -> Show all groups and students "\
                                   "\n2 -> Show all events "\
                                   "\n3 -> Show all students of a group "\
-                                  "\n4 -> Show all students of a group for a given event"\
+                                  "\n4 -> Show all students of a group for a given event name"\
                                   "\nq -> Go back"
 #define WELCOME_MENU "Welcome. "\
                      "\n1 -> User sign in "\

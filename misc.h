@@ -29,6 +29,11 @@ int getch();
 #endif
 #define MAX_ID 1000000000000000000u //19 digits
 #define MAX_ID_LENGTH 19 //I have settled on this maximum length of the id, but it can be increased and even made a string.
+
+enum CHECK {
+    LINE = 's', WORD = 'n', DATE_FUTURE = 'l', DATE_PAST = 'k', DATE = 'd', PASS = 'p', BOOL = 'b', FLOAT = 'f', ID = 'i', YEAR = 'y'
+};
+
 void ensureFileExists(const std::string& f);
 void setTableProperties(fort::char_table& t, unsigned firstColored, unsigned secondColored);
 void pause(); //Wait for a keypress
@@ -37,8 +42,8 @@ std::string getPassword();
 ull genID();
 void cls();
 unsigned getCurYear();
-bool checkString(std::string&, char); //Input check
-bool checkDate(std::string& s);
+std::string checkString(std::string&, char); //Input check
+bool checkDate(std::string& s, int);
 std::string lowercase(const std::string&);
 std::string hash(const std::string& s); //uses sha256.cpp and sha256.h for encrypting passwords, outputs hashed string
 bool readString(std::istream& is, std::string& s, char mode);
@@ -65,7 +70,7 @@ public:
     Log(Log const&) = delete; //No copying, no moving!
     void operator=(Log const&) = delete; //No assigning!
 
-    static Log* init(const std::string& filename) {
+    static Log* init(const std::string& filename) { //Start logging and get a pointer
         static Log instance(filename);
         return &instance;
     }
@@ -77,14 +82,14 @@ public:
         _put(args...);
     }
 
-    void flush() {
+    void flush() { //Clear the file
         f.close();
         f.open(fname, std::fstream::out | std::fstream::trunc | std::fstream::in);
         put("-------------| Log flushed |-------------");
     }
-    void print() {
+    void print() { //Print the file
         f.close();
-        f.open(fname,std::fstream::out | std::fstream::in | std::fstream::app);
+        f.open(fname, std::fstream::out | std::fstream::in | std::fstream::app);
         f.seekg(std::fstream::beg);
         std::cout << f.rdbuf();
         f.seekg(std::fstream::end);
@@ -104,7 +109,7 @@ private:
     }
     explicit Log(const std::string& name) : fname(name), f(name, std::fstream::out | std::fstream::app) {
         if (!f) throw std::runtime_error("Error opening log file " + fname);
-        put("-------------| Started log session |-------------");
+        put("-------------| Started log session |-------------"); //On start, print the message
     }
     std::string fname;
     std::fstream f;

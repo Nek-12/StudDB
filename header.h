@@ -4,8 +4,6 @@ class Entry;
 class Student;
 class Event;
 
-//TODO: Edit comments
-//TODO: Remove references from primitive types
 //Base class
 /*
  * Each journal entry represents some kind of table row that contains different info for each entry, but the operations are same.

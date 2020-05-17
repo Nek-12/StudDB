@@ -76,7 +76,7 @@ bool checkDate(std::string& s, int isPast) {
             default:
                 throw std::invalid_argument("Default case when parsing month");
         }
-        s = res.str(1) + '.' + res.str(3) + '.' + res.str(5); //TODO: TEST: CHANGES THE STRING
+        s = res.str(1) + '.' + res.str(3) + '.' + res.str(5);
         return true;
     }
     else

@@ -18,7 +18,6 @@ int getch() //Getch for linux
     return (ch);
 }
 #endif
-//TODO: Edit comments
 inline void cls() //This function depends on platform
 { system(CLS); }
 bool yesNo(const std::string& msg);

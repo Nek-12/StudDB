@@ -104,7 +104,7 @@ std::vector<Entry*> Data::search(std::string& str) //Search anything
     std::vector<Entry*> ret; //Create the result
     plog->put("Started data.search()");
     for (auto& e : events)
-        if (e->check(str)) ret.push_back(e.get()); //TODO: Bad dirty and dangerous
+        if (e->check(str)) ret.push_back(e.get());
     if (checkString(str, 'i').empty()) {
         ull no = stoid(str);
         auto gr = groups.find(no);

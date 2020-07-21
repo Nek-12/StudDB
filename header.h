@@ -108,7 +108,7 @@ public:
         for (auto& el: groups[gid])
             if (el->id() == id)
                 return nullptr; //Nullptr if we don't have any entries
-        return groups[gid].emplace_back(new Student(id, args...)).get(); //TODO: Don't return raw pointers
+        return groups[gid].emplace_back(new Student(id, args...)).get(); // TODO: Don't return raw pointers
     }
     template<typename... Args>
     Event* addEvent(const ull& id, const Args& ... args) {
@@ -117,7 +117,7 @@ public:
             if (el->id() == id) return nullptr;
         return events.emplace_back(new Event(id, args...)).get();
     }
-    std::vector<Entry*> sieve(ull, std::string& str); //Checks the events in the group
+    std::vector<Entry*> sieve(ull, const std::string& str); //Checks the events in the group
     auto addGroup(const ull& no) { return groups.try_emplace(no); }
     bool findGroup(const ull g) { return groups.find(g) != groups.end(); }
     void erase(Student* s);
@@ -217,6 +217,3 @@ private:
                              "\n2 -> By Name Descending"\
                              "\n3 -> By ID"\
                              "\nq -> Don't care"
-
-
-

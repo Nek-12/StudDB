@@ -358,8 +358,8 @@ void showData() {
                     auto res = data->sieve(gid, temp);
                     if (!res.empty()) {
                         std::cout << "Found: " << std::endl;
-                        for (auto el: res)
-                            std::cout << *el << std::endl; //Print
+                        for (auto* el: res)
+                            std::cout << el << std::endl; //Print
                     }
                     else std::cout << "Nothing found" << std::endl;
                 } else
@@ -545,8 +545,7 @@ void login(bool isadmin) {
         if (usr == "exit") return;
         if (data->loginCheck(usr, isadmin)) //If user exists
             break; //Move to the next step
-        else
-            std::cout << "User not found." << std::endl;
+        std::cout << "User not found." << std::endl;
         pause();
     }
     while (true) //While the user did not enter his password
@@ -561,21 +560,20 @@ void login(bool isadmin) {
         if (pass == "exit") return;
         if (data->passCheck(usr, pass, isadmin)) //If the login and password match
             break; //Summon the console
-        else
-            std::cout << "Wrong password.\n";
+        std::cout << "Wrong password.\n";
         pause();
     }
     std::cout << "Success. Redirecting..." << std::endl;
     pause();
     console(usr, isadmin);
 }
-int main(int, char* argv[]) try {
+auto main(int, char* argv[]) -> int try {
     path = argv[0];
     path.erase(path.find_last_of('\\') + 1); //Makes 'path' be the path to the app folder, removing program name
 //Try function block for convenience. Argc is unused, argv is an array of char arrays, each with an argument, first is path
     plog = Log::init(path + "log.txt");
     data = Data::getInstance(); //Assign to our global pointer. For exception safety
-        data->load(); //Loads ALL the data
+    data->load(); //Loads ALL the data
 #ifndef NDEBUG //For debugging
     std::cout << data->printGroups() << data->printEvents() << '\n' << path << '\n'
     << data->printCredentials(false) << '\n' << data->printCredentials(true) << std::endl;

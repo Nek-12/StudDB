@@ -119,7 +119,7 @@ std::vector<Entry*> Data::search(std::string& str) //Search anything
     return ret;
 }
 
-std::vector<Entry*> Data::sieve(ull gid,std::string& str) //Search anything
+std::vector<Entry*> Data::sieve(ull gid, const std::string& str) //Search anything
 {
     std::vector<Entry*> ret; //Create the result
     plog->put("Started data.sieve()");

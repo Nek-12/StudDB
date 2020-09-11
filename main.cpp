@@ -1,7 +1,7 @@
 // NOTE: READ THIS FILE IN REVERSE DIRECTION (FROM THE END)
 #include "header.h"
-#include <cmath>
 #include "misc.h"
+#include <cmath>
 #include <regex>
 
 std::string path; // extern global string NOLINT
@@ -21,27 +21,25 @@ int getch() // Getch for linux
     return (ch);
 }
 #endif
-inline void cls() // This function depends on platform
-{
-    std::cout << "Press any key to continue...";
-    getch();
+inline void cls() { // This function depends on platform
+    system(CLS);    // NOLINT
 }
-bool                yesNo(const std::string& msg);
-ull                 inputID();
-ull                 select(const ull& limit);
-std::vector<Entry*> search();
-Entry*              selectEntry();
-void                addEntries(Entry* pe);
-void                manageEntry();
-void                showData();
-void                management(bool isadmin);
-std::pair<bool,std::string>               passConfirm();
-bool                passChange(const std::string& l, bool isadmin);
-void                manageUsr();
-void                createAccPrompt(bool isadmin);
-bool                delDialog(const std::string& l, bool isadmin);
-void                console(const std::string& usr, bool);
-void                login(bool isadmin);
+bool                         yesNo(const std::string& msg);
+ull                          inputID();
+ull                          select(const ull& limit);
+std::vector<Entry*>          search();
+Entry*                       selectEntry();
+void                         addEntries(Entry* pe);
+void                         manageEntry();
+void                         showData();
+void                         management(bool isadmin);
+std::pair<bool, std::string> passConfirm();
+bool                         passChange(const std::string& l, bool isadmin);
+void                         manageUsr();
+void                         createAccPrompt(bool isadmin);
+bool                         delDialog(const std::string& l, bool isadmin);
+void                         console(const std::string& usr, bool);
+void                         login(bool isadmin);
 
 // Not all declarations are needed because I arranged the functions properly.
 // However this is a bad practice
@@ -78,7 +76,8 @@ ull select(const ull& limit) { // Select from some kind of range, used in search
             std::cerr << "You have selected a bad value. Try again: "
                       << std::endl;
             continue;
-        }             return ret;
+        }
+        return ret;
     }
 }
 
@@ -88,12 +87,12 @@ void sortResults(std::vector<Entry*>& v) {
         switch (getch()) {
         case '1':
             std::sort(v.begin(), v.end(), [](Entry* left, Entry* right) {
-                return left->getName() < right->getName(); //NOLINT
+                return left->getName() < right->getName(); // NOLINT
             });
             return;
         case '2':
             std::sort(v.begin(), v.end(), [](Entry* left, Entry* right) {
-                return left->getName() > right->getName(); //NOLINT
+                return left->getName() > right->getName(); // NOLINT
             });
             return;
         case '3':
@@ -190,8 +189,8 @@ Event* newEvent() {
 
 Student* newStudent() {
     std::string temp, name, degree, date;
-    float       grade = NAN;
-    ull         id = NAN, gid = NAN;
+    float       grade = 0.0;
+    ull         id = 0, gid = 0;
     std::cout << "Enter the group's #" << std::endl;
     while (!readString(std::cin, temp, 'i'))
         ; // Once we read the group no
@@ -448,7 +447,7 @@ void management(bool isadmin) { // Differentiates between right levels
     }
 }
 
-auto passConfirm() -> std::pair<bool,std::string> {
+auto passConfirm() -> std::pair<bool, std::string> {
     std::string tempA, tempB;
     while (true) {
         cls();
@@ -456,7 +455,7 @@ auto passConfirm() -> std::pair<bool,std::string> {
         while (!readString(std::cin, tempA, 'p'))
             ;
         if (tempA == "exit")
-            return std::make_pair(false,tempA);
+            return std::make_pair(false, tempA);
 
         std::cout << PASSCONFIRM << std::endl;
         while (!readString(std::cin, tempB, 'p'))
@@ -467,11 +466,11 @@ auto passConfirm() -> std::pair<bool,std::string> {
             break;
         std::cerr << "Your passwords don't match." << std::endl;
     }
-    return std::make_pair(true,tempA);
+    return std::make_pair(true, tempA);
 }
 
 bool passChange(const std::string& l, bool isadmin) {
-    std::pair<bool,std::string> p = passConfirm();
+    std::pair<bool, std::string> p = passConfirm();
     if (!p.first)
         return false; // It changes the string it was given on success
     data->changePass(l, p.second, isadmin);
@@ -506,12 +505,12 @@ void manageUsr() // Admins can delete users, but not admins (except own)
         }
         if (yesNo("Delete another one?"))
             continue;
-                    return;
+        return;
     }
 }
 
 void createAccPrompt(bool isadmin) {
-    std::string l, temp;
+    std::string                  l, temp;
     std::pair<bool, std::string> p;
     cls();
     std::cout << LOGINPROMPT << std::endl;
@@ -641,7 +640,7 @@ void login(bool isadmin) {
 }
 
 auto main(int, char* argv[]) -> int try {
-    path       = argv[0];
+    path = argv[0];
     path.erase(
         path.find_last_of('\\') +
         1); // Makes 'path' be the path to the app folder, removing program name

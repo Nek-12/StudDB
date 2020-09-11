@@ -12,6 +12,7 @@
 #include <typeinfo>
 //#define NDEBUG //Forbid debugging output in the release version (explicit, but can be defined by CMake automatically)
 #ifndef __linux__
+#define CLS "cls"
 #include <conio.h>
 #define CARRIAGE_RETURN_CHAR 13 //getch() returns different keycodes for windows and linux
 #define BACKSPACE_CHAR 8
@@ -19,6 +20,7 @@ using ull = unsigned long long; //The size of unsigned long on my linux distro i
 //unsigned long long (!) is just ~10^20
 using us = unsigned short;
 #else
+#define CLS "clear"
 using ull = unsigned long; //Depends on the platform
 #define CARRIAGE_RETURN_CHAR 10
 #define BACKSPACE_CHAR 127

@@ -15,7 +15,6 @@
 #include <conio.h>
 #define CARRIAGE_RETURN_CHAR 13 //getch() returns different keycodes for windows and linux
 #define BACKSPACE_CHAR 8
-#define CLS "cls"
 using ull = unsigned long long; //The size of unsigned long on my linux distro is around ~10^25, however on my Windows OS the size of
 //unsigned long long (!) is just ~10^20
 using us = unsigned short;
@@ -23,7 +22,6 @@ using us = unsigned short;
 using ull = unsigned long; //Depends on the platform
 #define CARRIAGE_RETURN_CHAR 10
 #define BACKSPACE_CHAR 127
-#define CLS "clear"
 #include <termios.h>
 int getch();
 #endif
@@ -42,11 +40,13 @@ std::string getPassword();
 ull genID();
 void cls();
 unsigned getCurYear();
-std::string checkString(std::string&, char); //Input check
-bool checkDate(std::string& s, int);
+std::pair<bool, std::string> checkString(const std::string&,
+                                         char); // Input check
+bool        checkDate(const std::string& s, int is_past);
+std::string format_date(const std::string& date);
 std::string lowercase(const std::string&);
 std::string hash(const std::string& s); //uses sha256.cpp and sha256.h for encrypting passwords, outputs hashed string
-bool readString(std::istream& is, std::string& s, char mode);
+bool readString(std::istream& is, std::string& ret, char mode);
 //allows for reading a line from the iostream object with input check (foolproofing)
 // 's' for strings with spaces, 'n' for normal, 'd' for date, 'p' for passwords, 'i' for numbers (IDs), 'y' for years
 //Not the best solution but convenient for me
@@ -54,8 +54,7 @@ class Data;
 class Log;
 extern Data* data;
 extern Log* plog;
-extern std::string path; //Path to the program folder, see main.cpp -> int main()
-
+extern std::string path; // Path to the program folder, see main.cpp -> int main()
 inline char* getCurTime() {
     auto t = std::chrono::system_clock::now();
     std::time_t ttime = std::chrono::system_clock::to_time_t(t);

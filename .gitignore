@@ -3,10 +3,10 @@
 **/Makefile
 **/CmakeCache.txt
 **/cmake_install.cmake
-**/CourseWork.cbp
 **/cmake-build-*/**
 .clangd
 build*
 compile_commands.json
 .vscode
 *.txt
+build

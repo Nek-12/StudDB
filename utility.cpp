@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <random> //For genID()
 //!Don't reinitialize the regex every time, it's slow
-const std::regex date_regex(R"((\d{1,2})([-. /])(\d{1,2})([-. /])(\d{4}))");
+const std::regex date_regex(R"((\d{1,2})([-. /])(\d{1,2})([-. /])(\d{4}))"); //NOLINT
 
 void pause() {
     std::cout << "Press any key to continue..." << std::endl;

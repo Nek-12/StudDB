@@ -1,7 +1,8 @@
-#include "header.h"
+#include "Class.h"
 #include "lib/sha256.h" //Encryption
 #include <filesystem>
 #include <random> //For genID()
+
 //!Don't reinitialize the regex every time, it's slow
 const std::regex date_regex(R"((\d{1,2})([-. /])(\d{1,2})([-. /])(\d{4}))"); //NOLINT
 

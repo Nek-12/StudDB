@@ -1,4 +1,4 @@
-#include "header.h"
+#include "Class.h"
 
 void Data::erase(Student* s) {
     plog->put("Called erase on", s->getName());

@@ -1,4 +1,4 @@
-#include "header.h"
+#include "Class.h"
 
 Entry::~Entry() {
     plog->put("called destructor on", getName());
